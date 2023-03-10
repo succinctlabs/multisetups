@@ -38,7 +38,7 @@ while [ "$1" != "" ]; do
         shift 2
         ;;
     *)
-        echo "Invalid comamnd line arg $1"
+        echo "Invalid command line arg $1"
         exit 1
     esac
 done
