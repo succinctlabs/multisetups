@@ -1,0 +1,87 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Description" : "AWS CloudFormation Template for Succinct Trusted Setup Contributor machine",
+
+    "Resources": {
+        "ContributorMachine": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": "ami-08c40ec9ead489470",
+                "InstanceType": "r6a.8xlarge",
+                "AvailabilityZone": "us-east-1a",
+                "SecurityGroups": [ {"Ref": "SSHOnlyGroup"} ],
+
+                "UserData"       : { "Fn::Base64" : 
+                    { "Fn::Join" :
+                        ["", [
+                            "#!/bin/bash -xe\n",
+
+                            "# Update apt\n",
+                            "sudo apt-get update -y \n",
+                            "sudo apt-get upgrade -y \n",
+
+                            "# Install docker",
+                            "sudo apt-get install -y ca-certificates curl gnupg lsb-release \n",
+                            "sudo mkdir -m 0755 -p /etc/apt/keyrings \n",
+                            "sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg \n",
+                            "sudo echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null \n",
+                            "sudo apt-get update -y \n",
+                            "sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \n",
+
+                            "# Add the ssh public key for the user ubuntu\n",
+                            "mkdir .ssh \n",
+                            "chmod 700 .ssh \n",
+                            "echo \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQOOiqDORSjOqkvoKcJbGxQG9TvMwkoJecMZ3iST36b kjue235@gmail.com\" > .ssh/authorized_keys \n",
+                            "chmod 600 .ssh/authorized_keys \n",
+
+                            "# ",
+
+                            "# Create workspace directory\n",
+                            "mkdir trusted_setup_workspace\n"
+                        ]]
+                    }
+                },
+
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "trusted-setup-contributor-machine"
+                    }
+                ]
+            }
+        },
+        "ContributorMachineVolume": {
+            "Type": "AWS::EC2::Volume",
+            "Properties": {
+                "Size": 100,
+                "VolumeType": "gp2",
+                "Encrypted": true,
+                "AvailabilityZone": "us-east-1a",
+                "DeletionPolicy": "Delete"
+            }
+        },
+        "MountPoint": {
+            "Type": "AWS::EC2::VolumeAttachment",
+            "Properties": {
+                "InstanceId": { "Ref": "ContributorMachine" },
+                "VolumeId": { "Ref": "ContributorMachineVolume" },
+                "Device": "/dev/sdf"
+            }
+        },
+        "SSHOnlyGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "allow ssh only",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22
+                    }
+                ]
+            }
+        }
+    }
+}
